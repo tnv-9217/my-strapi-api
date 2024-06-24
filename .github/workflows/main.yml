@@ -27,12 +27,12 @@ jobs:
     - name: Add SSH key and configure known_hosts
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        EC2_HOST: ${{ secrets.SSH_HOST }}
+        EC2_HOST: ${{ secrets.EC2_HOST }}
       run: |
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > private_key
         chmod 600 private_key
-        ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+        ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
     - name: Deploy to EC2
       env:
@@ -40,5 +40,5 @@ jobs:
         EC2_HOST: ${{ secrets.EC2_HOST }}
         EC2_USER: ${{ secrets.EC2_USER }}
       run: |
-        scp -i private_key -r ./* $EC2_USER@$EC2_HOST:/home/ubuntu/your-strapi-repo
-        ssh -i private_key $EC2_USER@$EC2_HOST "cd /home/ubuntu/your-strapi-repo && npm install && pm2 restart all"
+        scp -i private_key -o StrictHostKeyChecking=no -r ./* $EC2_USER@$EC2_HOST:/home/ubuntu/your-strapi-repo
+        ssh -i private_key -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "cd /home/ubuntu/your-strapi-repo && npm install && pm2 restart all"
