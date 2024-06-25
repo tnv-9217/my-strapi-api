@@ -26,7 +26,7 @@ jobs:
 
     - name: Copy files to EC2
       run: |
-        scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no -r ./* $EC2_USER@$EC2_HOST:/home/ubuntu/my-strapi-api
+        scp -i ${{ secrets.SSH_PRIVATE_KEY }} -o StrictHostKeyChecking=no -r ./* $EC2_USER@$EC2_HOST:/home/ubuntu/my-strapi-api/
 
     - name: SSH into EC2 and deploy
       env:
