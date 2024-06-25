@@ -1,4 +1,4 @@
-name: Deploy Strapi
+name: Deploy to EC2
 
 on:
   push:
@@ -21,46 +21,18 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Build Strapi with increased memory limit
-      run: |
-        export PATH=$(npm bin):$PATH
-        NODE_OPTIONS="--max_old_space_size=8192" npm run build
+    - name: Build project
+      run: NODE_OPTIONS="--max_old_space_size=8192" npm run build
 
-    - name: Add SSH key and configure known_hosts
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/private_key
-        chmod 600 ~/.ssh/private_key
-        ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
-
-    - name: Deploy to EC2
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USER: ${{ secrets.EC2_USER }}
-        REPO_URL: ${{ secrets.REPO_URL }}
+    - name: Copy files to EC2
       run: |
         scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no -r ./* $EC2_USER@$EC2_HOST:/home/ubuntu/my-strapi-api
-        ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
-          # Install PM2 if it's not installed
-          if ! command -v pm2 &> /dev/null
-          then
-            npm install -g pm2
-          fi
 
-          # Clone the repository or pull the latest changes
-          if [ -d "/home/ubuntu/my-strapi-api" ]; then
-            cd /home/ubuntu/my-strapi-api
-            git pull origin main
-          else
-            git clone $REPO_URL /home/ubuntu/my-strapi-api
-            cd /home/ubuntu/my-strapi-api
-          fi
-
-          # Install dependencies and restart the application
-          npm install
-          pm2 restart all || pm2 start npm --name "strapi" -- run start
-        EOF
+    - name: SSH into EC2 and deploy
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        EC2_USER: ubuntu
+        EC2_HOST: ec2-54-167-101-170.compute-1.amazonaws.com
+      run: |
+        echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+        ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "cd /home/ubuntu/my-strapi-api && npm install && npm run build && pm2 restart all"
