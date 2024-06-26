@@ -50,5 +50,5 @@ jobs:
             cd /home/ubuntu/my-strapi-api
           fi
           npm install
-          pm2 restart all
+          pm2 start npm --name "strapi" -- start || pm2 restart "strapi"
         EOF
